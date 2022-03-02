@@ -97,25 +97,23 @@ def create_merged_df(BAT_BTC, BAT_USD, BTC_USD, col):
     close_df = close_df.fillna(method="ffill") # forward fill two missing BAT/BTC values
     return close_df
 
-def create_plot(df, cols, y_axis, dollar=False, plt_show=False, plt_save=False, png_name='plot.png'):
+def create_plot(df, cols, plt_show=False, plt_save=False, png_name='plot.png'):
     fig, ax = plt.subplots()
     plt.plot(df[cols])
     plt.title(str(cols[0]) + ' Price Plot')
     plt.xlabel('Date')
-    plt.ylabel(y_axis)
-    # ax.yaxis.set_major_formatter('${x:1.2f}')
-    if dollar == True:
-        fmt = '${x:,.2f}'
-        tick = mtick.StrMethodFormatter(fmt)
-        ax.yaxis.set_major_formatter(tick) 
+    plt.ylabel('Price')
+    fmt = '${x:,.2f}'
+    tick = mtick.StrMethodFormatter(fmt)
+    ax.yaxis.set_major_formatter(tick) 
     if plt_show == True:
         plt.show()
     if plt_save == True:
         plt.savefig(png_name)
 
-def correlation_plot(df, cols, y_axis, plt_show=False, plt_save=False, png_name='plot.png'):
+def correlation_plot(df, plt_show=False, plt_save=False, png_name='plot.png'):
     fig, ax = plt.subplots()
-    plt.plot(df[cols])
+    plt.plot(df)
     plt.title('Correlation Plot')
     plt.xlabel('Date')
     plt.ylabel('Correlation')
@@ -149,8 +147,8 @@ if __name__ == "__main__":
     close_df = create_merged_df(BAT_BTC, BAT_USD, BTC_USD, 'close')
 
     # print graph
-    create_plot(close_df, ['BAT_USD'], 'Price', True, False, False, 'plots/BAT_USD_Price_Plot.png')
-    create_plot(close_df, ['BTC_USD'], 'Price', True, False, False, 'plots/BTC_USD_Price_Plot.png')
+    create_plot(close_df, ['BAT_USD'], False, False, 'plots/BAT_USD_Price_Plot.png')
+    create_plot(close_df, ['BTC_USD'], False, False, 'plots/BTC_USD_Price_Plot.png')
 
     # correlation test + table
     close_corr_table = close_df.corr()
@@ -164,7 +162,8 @@ if __name__ == "__main__":
     roll_bat_btc = close_df['BAT_BTC'].rolling(180).corr(close_df['BTC_USD'])
     roll_bat_btc.name = 'roll_bat_btc'
     roll_df = pd.concat([roll_bat, roll_usd, roll_bat_btc], axis=1)
-    correlation_plot(roll_df, ['roll_bat', 'roll_usd', 'roll_bat_btc'], True, True, 'plots/rolling_correlation.png')
+    print(roll_df)
+    correlation_plot(roll_df, False, False, 'plots/rolling_correlation.png')
 
 
 
