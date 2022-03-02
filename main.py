@@ -1,7 +1,10 @@
 # First import the libraries that we need to use
 import datetime
 import math
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import pandas as pd
+import plotly.figure_factory as ff
 import requests
 import json
 
@@ -81,9 +84,46 @@ def read_data(file_name, cols=['date','close','volume']):
     dt = dt.sort_values(['date'])
     return dt 
 
+def create_merged_df(BAT_BTC, BAT_USD, BTC_USD, col):
+    BAT_BTC = BAT_BTC[['date',col]]
+    BAT_USD = BAT_USD[['date',col]]
+    BTC_USD = BTC_USD[['date',col]]
+    BAT_BTC = BAT_BTC.rename(columns={col: "BAT_BTC"})
+    BAT_USD = BAT_USD.rename(columns={col: "BAT_USD"})
+    BTC_USD = BTC_USD.rename(columns={col: "BTC_USD"})
+    close_df = BAT_BTC.merge(BAT_USD, on='date')
+    close_df = close_df.merge(BTC_USD, on='date')
+    close_df.set_index('date',inplace=True)
+    close_df = close_df.fillna(method="ffill") # forward fill two missing BAT/BTC values
+    return close_df
 
+def create_plot(df, cols, plt_show=False, plt_save=False, png_name='plot.png'):
+    fig, ax = plt.subplots()
+    plt.plot(df[cols])
+    plt.title(str(cols[0]) + ' Price Plot')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    # ax.yaxis.set_major_formatter('${x:1.2f}')
+    fmt = '${x:,.2f}'
+    tick = mtick.StrMethodFormatter(fmt)
+    ax.yaxis.set_major_formatter(tick) 
+    if plt_show == True:
+        plt.show()
+    if plt_save == True:
+        plt.savefig(png_name)
 
-
+def table_plot(df, plt_show=False, plt_save=False, png_name='table_plot.png'): # https://stackoverflow.com/questions/19726663/how-to-save-the-pandas-dataframe-series-data-as-a-figure
+    fig =  ff.create_table(close_corr_table)
+    fig.update_layout(
+        autosize=False,
+        width=500,
+        height=200,
+        font={'size':8})
+    if plt_show == True:
+        fig.show()
+    if plt_save == True:
+        fig.write_image(png_name, scale=2)
+    
 if __name__ == "__main__":
     # extract data
     # BTC_USD = extract_data('BTC/USD', '2017-11-09', '2022-02-28')
@@ -93,5 +133,20 @@ if __name__ == "__main__":
     BAT_USD = read_data('BAT-USD.parquet')
     BTC_USD = read_data('BTC-USD.parquet')
 
-    # correlation test
+    # create close dataframe
+    close_df = create_merged_df(BAT_BTC, BAT_USD, BTC_USD, 'close')
+
+    # print graph
+    create_plot(close_df, ['BAT_USD'], False, True, 'plots/BAT_USD_Price_Plot.png')
+    create_plot(close_df, ['BTC_USD'], False, True, 'plots/BTC_USD_Price_Plot.png')
+
+    # correlation test + table
+    close_corr_table = close_df.corr()
+    table_plot(close_corr_table, False, True, 'plots/correlation_table.png')
+
+    
+    
+
+
+
 
