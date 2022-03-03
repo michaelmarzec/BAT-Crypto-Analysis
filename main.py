@@ -133,6 +133,17 @@ def table_plot(df, plt_show=False, plt_save=False, png_name='table_plot.png'): #
         fig.show()
     if plt_save == True:
         fig.write_image(png_name, scale=2)
+
+def rolling_correlation(df):
+    roll_bat = df['BAT_USD'].rolling(180).corr(df['BAT_BTC'])
+    roll_bat.name = 'roll_bat'
+    roll_usd = df['BAT_USD'].rolling(180).corr(df['BTC_USD'])
+    roll_usd.name = 'roll_usd'
+    roll_bat_btc = df['BAT_BTC'].rolling(180).corr(df['BTC_USD'])
+    roll_bat_btc.name = 'roll_bat_btc'
+    roll_df = pd.concat([roll_bat, roll_usd, roll_bat_btc], axis=1)
+    return roll_df
+
     
 if __name__ == "__main__":
     # extract data
@@ -155,15 +166,8 @@ if __name__ == "__main__":
     table_plot(close_corr_table, False, False, 'plots/correlation_table.png')
 
     # rolling correlation
-    roll_bat = close_df['BAT_USD'].rolling(180).corr(close_df['BAT_BTC'])
-    roll_bat.name = 'roll_bat'
-    roll_usd = close_df['BAT_USD'].rolling(180).corr(close_df['BTC_USD'])
-    roll_usd.name = 'roll_usd'
-    roll_bat_btc = close_df['BAT_BTC'].rolling(180).corr(close_df['BTC_USD'])
-    roll_bat_btc.name = 'roll_bat_btc'
-    roll_df = pd.concat([roll_bat, roll_usd, roll_bat_btc], axis=1)
-    print(roll_df)
-    correlation_plot(roll_df, False, False, 'plots/rolling_correlation.png')
+    rolling_correlation_df = rolling_correlation(close_df)
+    correlation_plot(rolling_correlation_df, False, False, 'plots/rolling_correlation.png')
 
 
 
