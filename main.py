@@ -117,6 +117,7 @@ def correlation_plot(df, plt_show=False, plt_save=False, png_name='plot.png'):
     plt.title('Correlation Plot')
     plt.xlabel('Date')
     plt.ylabel('Correlation')
+    plt.legend(['BAT/USD & BAT/BTC','BAT/USD & BTC/USD','BAT/BTC & BTC/USD'])
     if plt_show == True:
         plt.show()
     if plt_save == True:
@@ -144,8 +145,78 @@ def rolling_correlation(df):
     roll_df = pd.concat([roll_bat, roll_usd, roll_bat_btc], axis=1)
     return roll_df
 
+def create_holdings_portfolio(start_date, today, hold_only_columns = ['BAT','USD','BTC']):
+        index = pd.date_range(start_date, today)
+        port_df = pd.DataFrame(index=index,columns=hold_only_columns)
+
+        trading_dates = pd.date_range(start_date, today, freq='1M')+pd.offsets.MonthBegin(-1)
+        return port_df, trading_dates
+
+def bat_acquisition(df, today, trade_dates, BAT_USD, BAT_BTC):
+        for i, date in enumerate(trade_dates):
+            date = date.strftime("%Y-%m-%d")
+            if i == 0:
+                # find conversion rates
+                bat_conversion_rate = float(BAT_USD[BAT_USD['date'] == date]['close'])
+                btc_conversion_rate = float(BAT_BTC[BAT_BTC['date'] == date]['close'])
+
+                # add to portfolio
+                df.loc[date]['BAT'] = 100 
+                df.loc[date]['USD'] = 100 * bat_conversion_rate
+                df.loc[date]['BTC'] = 100 * btc_conversion_rate
+                df = df.ffill()
+            else:
+                # find conversion rates
+                bat_conversion_rate = float(BAT_USD[BAT_USD['date'] == date]['close'])
+                btc_conversion_rate = float(BAT_BTC[BAT_BTC['date'] == date]['close'])
+
+                # add to portfolio
+                df.loc[date, 'BAT'] += 100
+                df.loc[date, 'USD'] += 100 * bat_conversion_rate
+                df.loc[date, 'BTC'] += 100 * btc_conversion_rate
+                
+                # fill down
+                df[date:today]['BAT'] = df.loc[date,'BAT']
+                df[date:today]['USD'] = df.loc[date,'USD']
+                df[date:today]['BTC'] = df.loc[date,'BTC']
+
+        return df
+
+def calc_hold_only_roi(df, bat_usd, btc_usd, start_date, today):
+        df_roi = df.copy()
+        BAT_USD_roi = bat_usd.set_index('date')
+        BTC_USD_roi = btc_usd.set_index('date')
+
+        BAT_USD_roi = BAT_USD_roi.loc[start_date:today]['close']
+        BTC_USD_roi = BTC_USD_roi.loc[start_date:today]['close']
+        
+        df_roi['BAT_ROI'] = df_roi['BAT'] * BAT_USD_roi
+        df_roi['BTC_ROI'] = df_roi['BTC'] * BTC_USD_roi
+        df_roi = df_roi.rename(columns={'USD':'USD_ROI'})
+
+        df_roi = df_roi[['USD_ROI','BAT_ROI','BTC_ROI']]
+
+        return df_roi
+
+def roi_plot(df, plt_show=False, plt_save=False, png_name='roi_plot.png'):
+    fig, ax = plt.subplots()
+    plt.plot(df)
+    plt.title('ROI/Price Plot')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    fmt = '${x:,.2f}'
+    tick = mtick.StrMethodFormatter(fmt)
+    ax.yaxis.set_major_formatter(tick) 
+    plt.legend(['USD_ROI','BAT_ROI','BTC_ROI'])
+    if plt_show == True:
+        plt.show()
+    if plt_save == True:
+        plt.savefig(png_name)
+
+
     
 if __name__ == "__main__":
+    print('execution started')
     # extract data
     # BTC_USD = extract_data('BTC/USD', '2017-11-09', '2022-02-28')
 
@@ -168,6 +239,27 @@ if __name__ == "__main__":
     # rolling correlation
     rolling_correlation_df = rolling_correlation(close_df)
     correlation_plot(rolling_correlation_df, False, False, 'plots/rolling_correlation.png')
+
+
+    ### market holdings
+
+    start_date = '2021-01-01'
+    # today = datetime.datetime.now().strftime("%Y-%m-%d")
+    today = '2022-02-28'
+
+    hold_only_portfolio, trade_dates = create_holdings_portfolio(start_date, today, hold_only_columns = ['BAT','USD','BTC'])
+    hold_only_portfolio = bat_acquisition(hold_only_portfolio, today, trade_dates, BAT_USD, BAT_BTC)
+
+
+    ### ROI conversion/analysis (convert everything to USD for appropriate $ analysis)
+    hold_only_portfolio_roi = calc_hold_only_roi(hold_only_portfolio, BAT_USD, BTC_USD, start_date, today)
+    roi_plot(hold_only_portfolio_roi, False, False, 'plots/roi_plot.png')
+
+
+
+
+
+
 
 
 
