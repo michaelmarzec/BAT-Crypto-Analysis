@@ -247,9 +247,9 @@ if __name__ == "__main__":
 
     # ### market holdings
 
-    # start_date = '2021-01-01'
+    start_date = '2021-01-01'
     # # today = datetime.datetime.now().strftime("%Y-%m-%d")
-    # today = '2022-02-28'
+    today = '2022-02-28'
 
     # hold_only_portfolio, trade_dates = create_holdings_portfolio(start_date, today, hold_only_columns = ['BAT','USD','BTC'])
     # hold_only_portfolio = bat_acquisition(hold_only_portfolio, today, trade_dates, BAT_USD, BAT_BTC)
@@ -311,7 +311,7 @@ if __name__ == "__main__":
         # split into input and output columns
         trainX, trainy = train[:, :-1], train[:, -1]
         # fit model
-        model = XGBRegressor(objective='reg:squarederror', n_estimators=1000) #try: squaredlogerror
+        model = XGBRegressor(objective='reg:squaredlogerror', n_estimators=1000) #try: squaredlogerror; squarederror
         model.fit(trainX, trainy)
         # make a one-step prediction
         yhat = model.predict(np.asarray([testX]))
@@ -328,34 +328,117 @@ if __name__ == "__main__":
         # eval metrics: MAE
     # from matplotlib import pyplot
 
-    data = series_to_supervised(BAT_USD['close'], n_in=3)
-    mae, y, yhat = walk_forward_validation(data, 31)
-    print(mae)
-    print(y)
-    print(yhat)
+    
+    # for i in range(1,31):
+    # data = series_to_supervised(BAT_USD['close'],n_in=30)
+    # mae, y, yhat = walk_forward_validation(data, 31)
+    # print(mae)
+    # print(str(i) + ' - ' + str(mae))
+        # print(y)
+        # print(yhat)
+
+    # print(y)
+    # print(yhat)
     # pyplot.plot(y, label='Expected')
     # pyplot.plot(yhat, label='Predicted')
     # pyplot.legend()
     # pyplot.show()
 
     # # transform the time series data into supervised learning
-    # train = series_to_supervised(BAT_USD['close'], n_in=3)
+    # train = series_to_supervised(BAT_USD['close'], n_in=30)
     # # split into input and output columns
     # trainX, trainy = train[:, :-1], train[:, -1]
+
     # # fit model
-    # model = XGBRegressor(objective='reg:squarederror', n_estimators=1000)
+    # model = XGBRegressor(objective='reg:squaredlogerror', n_estimators=1000)
     # model.fit(trainX, trainy)
+
     # # construct an input for a new preduction
-    # # print(BAT_USD['close'].values)
-    # # breakpoint()
-    # row = BAT_USD['close'].values[-3:]#.flatten() ####<<<<<<----- fix 
+    # row = BAT_USD['close'].values[-30:]
+
     # # make a one-step prediction
     # yhat = model.predict(np.asarray([row]))
     # print('Input: %s, Predicted: %.3f' % (row, yhat[0]))
 
 
+    trading_df = BAT_USD.set_index('date')
+    trading_df = trading_df['close']
+
+    trade_start_date = '2021-02-01'
+
+####### uncomment #####################################
+
+    trade_start_date = datetime.datetime.strptime(trade_start_date, '%Y-%m-%d')
+    trade_end_date = datetime.datetime.strptime('2022-02-28', '%Y-%m-%d')
+    # delta = trade_end_date - trade_start_date
+
+
+    # price_predictions = []
+    # for i in range(delta.days + 1):
+    #     train_start = trade_start_date - datetime.timedelta(days=59) - pd.DateOffset(days=1) + datetime.timedelta(days=i)
+    #     train_end = trade_start_date - pd.DateOffset(days=1) + datetime.timedelta(days=i)
+    #     train_data = trading_df[train_start:train_end]
+
+    #     train = series_to_supervised(train_data, n_in=30)
+    #     trainX, trainy = train[:, :-1], train[:, -1]
+
+    #     model = XGBRegressor(objective='reg:squaredlogerror', n_estimators=1000)
+    #     model.fit(trainX, trainy)
+
+    #     row = train_data.values[-30:]
+    #     yhat = model.predict(np.asarray([row]))
+    #     price_predictions.append(yhat[0])
+    
+    # trading_df = trading_df[trade_start_date:trade_end_date]
+    # trading_df = pd.DataFrame(trading_df)
+    # trading_df['predictions'] = price_predictions
+########################################################
+
+
+    trading_df = pd.read_csv('test.csv')
+
+    trading_df['date'] = pd.to_datetime(trading_df['date'])
+    trading_df.set_index('date',inplace=True)
+
+    error = mean_absolute_error(trading_df['close'].values, trading_df['predictions'].values)
+    
+    trading_df['cash_holdings'] = np.nan
+    trading_df['bat_holdings'] = np.nan
+    
+
+    trading_df.loc[trade_start_date,['cash_holdings']] = 0
+    trading_df.loc[trade_start_date,['bat_holdings']] = 200
+
+    trading_df['bat_trade'] = np.where(trading_df['predictions'].shift(-1) > trading_df['close'],'buy','sell')
+
+    print(trading_df['bat_holdings'])
+    print(trading_df)
+    print(trading_df.columns)
+
+    trading_df['bat_holdings'] = np.where((trading_df['bat_trade'] == 'sell') & (trading_df['bat_holdings'] > 0), trading_df['bat_holdings'] * trading_df['close'], trading_df['bat_holdings'])
+    
+    # print(trading_df['bat_holdings'])
+    # print(trading_df)
+    # print(trading_df.columns)
 
     
+
+
+
+    # #bat_income_dates = pd.date_range(start_date, today, freq='1M')+pd.offsets.MonthBegin(-1)
+
+
+
+    
+
+
+
+
+
+
+
+    
+
 
 
 
