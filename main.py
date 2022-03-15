@@ -411,21 +411,49 @@ if __name__ == "__main__":
 
     trading_df['bat_trade'] = np.where(trading_df['predictions'].shift(-1) > trading_df['close'],'buy','sell')
 
-    print(trading_df['bat_holdings'])
+    bat_income_dates = pd.date_range(start_date, today, freq='1M')+pd.offsets.MonthBegin(-1)
+
+    for index, row in trading_df.iterrows():
+        if index == trade_start_date:
+            cur_action = row['bat_trade']
+            cur_close = row['close']
+            cur_cash = row['cash_holdings']
+            cur_bat = row['bat_holdings']
+        else:
+            index = index.strftime("%Y-%m-%d")
+            if index in bat_income_dates:
+                print('hello')
+                print(trading_df.loc[[index],['bat_holdings']])
+                print(trading_df.loc[index]['bat_holdings'])
+                print(trading_df.loc[index]['bat_holdings'] + 100)
+                trading_df.loc[[index],['bat_holdings']] = trading_df.loc[index]['bat_holdings'] + 100
+                print(trading_df.loc[[index],['bat_holdings']])
+            if cur_action == 'sell':
+                trading_df.loc[[index],['bat_holdings']] = 0
+                if cur_bat > 0:
+                    trading_df.loc[[index],['cash_holdings']] = cur_bat * cur_close
+                else:
+                    trading_df.loc[[index],['cash_holdings']] = cur_cash
+            else:
+                trading_df.loc[[index],['cash_holdings']] = 0
+                if cur_cash > 0:
+                    trading_df.loc[[index],['bat_holdings']] = cur_cash / cur_close
+                else:
+                    trading_df.loc[[index],['bat_holdings']] = cur_bat
+            cur_action = trading_df.loc[index]['bat_trade']
+            cur_close = trading_df.loc[index]['close']
+            cur_cash = trading_df.loc[index]['cash_holdings']
+            cur_bat = trading_df.loc[index]['bat_holdings']
+
+    
     print(trading_df)
-    print(trading_df.columns)
+    # trading_df.to_csv('test2.csv')
 
-    trading_df['bat_holdings'] = np.where((trading_df['bat_trade'] == 'sell') & (trading_df['bat_holdings'] > 0), trading_df['bat_holdings'] * trading_df['close'], trading_df['bat_holdings'])
+
+
+
+    
     
-    # print(trading_df['bat_holdings'])
-    # print(trading_df)
-    # print(trading_df.columns)
-
-    
-
-
-
-    # #bat_income_dates = pd.date_range(start_date, today, freq='1M')+pd.offsets.MonthBegin(-1)
 
 
 
