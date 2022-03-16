@@ -9,7 +9,8 @@ import pandas as pd
 # import requests
 # import json
 
-
+trading_df['cash_holdings'] = trading_df['cash_holdings'].ffill()
+    trading_df['bat_holdings'] = trading_df['bat_holdings'].ffill()
 
 df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
 # df['col3'] = np.nan
