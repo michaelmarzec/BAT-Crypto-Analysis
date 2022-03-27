@@ -135,6 +135,8 @@ def create_plot(df, cols, plt_show=False, plt_save=False, png_name='plot.png'):
     plt.title(str(cols[0]) + ' Price Plot')
     plt.xlabel('Date')
     plt.ylabel('Price')
+    ax.xaxis_date()
+    fig.autofmt_xdate()
     fmt = '${x:,.2f}'
     tick = mtick.StrMethodFormatter(fmt)
     ax.yaxis.set_major_formatter(tick) 
@@ -148,6 +150,8 @@ def correlation_plot(df, plt_show=False, plt_save=False, png_name='plot.png'):
     plt.plot(df)
     plt.title('Correlation Plot')
     plt.xlabel('Date')
+    ax.xaxis_date()
+    fig.autofmt_xdate()
     plt.ylabel('Correlation')
     plt.legend(['BAT/USD & BAT/BTC','BAT/USD & BTC/USD','BAT/BTC & BTC/USD'])
     if plt_show == True:
@@ -156,7 +160,7 @@ def correlation_plot(df, plt_show=False, plt_save=False, png_name='plot.png'):
         plt.savefig(png_name)
 
 def table_plot(df, plt_show=False, plt_save=False, png_name='table_plot.png'): # https://stackoverflow.com/questions/19726663/how-to-save-the-pandas-dataframe-series-data-as-a-figure
-    fig =  ff.create_table(close_corr_table)
+    fig =  ff.create_table(close_corr_table, index=True)
     fig.update_layout(
         autosize=False,
         width=500,
@@ -236,6 +240,8 @@ def roi_plot(df, plt_show=False, plt_save=False, png_name='roi_plot.png'):
     plt.title('ROI/Price Plot')
     plt.xlabel('Date')
     plt.ylabel('Price')
+    ax.xaxis_date()
+    fig.autofmt_xdate()
     fmt = '${x:,.2f}'
     tick = mtick.StrMethodFormatter(fmt)
     ax.yaxis.set_major_formatter(tick) 
@@ -397,6 +403,8 @@ def final_roi_plot(df, plt_show=False, plt_save=False, png_name='roi_plot.png'):
     plt.title('ROI/Price Plot')
     plt.xlabel('Date')
     plt.ylabel('Price')
+    ax.xaxis_date()
+    fig.autofmt_xdate()
     fmt = '${x:,.2f}'
     tick = mtick.StrMethodFormatter(fmt)
     ax.yaxis.set_major_formatter(tick) 
@@ -471,8 +479,9 @@ if __name__ == "__main__":
 
     # correlation_plot(rolling_correlation_df, False, False, 'plots/rolling_correlation.png')
 
-    # roi_plot(hold_only_portfolio_roi, False, False, 'plots/roi_plot.png')
-    # final_roi_plot(final_roi, True, True, 'plots/final_roi.png')
+    # roi_plot(hold_only_portfolio_roi, False, True, 'plots/roi_plot.png')
+    print(hold_only_portfolio_roi)
+    # final_roi_plot(final_roi, False, True, 'plots/final_roi.png')
 
 
 
