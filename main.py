@@ -15,8 +15,8 @@
 ## roi_plot --> 
 ## series_to_supervised --> ##### predict the price of BAT (relative to USD) # https://machinelearningmastery.com/xgboost-for-time-series-forecasting/
 ## train_test_split -->
-## walk_forward_validation --> ##### walk-forward validation for univariate data (it's expanding window)
-## xgboost_forecast --> ####fit an xgboost model and make a one step prediction
+## expanding_window_validation --> ##### expanding-window validation
+## xgboost_forecast --> #### fit an xgboost model and make a one step prediction
 ## xgBoost_model --> 
 ## trading_portfolio --> 
 
@@ -272,7 +272,7 @@ def train_test_split(data, n_test):
     output = data[:-n_test, :], data[-n_test:, :]
     return output
 
-def walk_forward_validation(data, n_test):
+def expanding_window_validation(data, n_test):
     predictions = list()
     # split dataset
     train, test = train_test_split(data, n_test)
@@ -290,7 +290,40 @@ def walk_forward_validation(data, n_test):
         history.append(test[i])
     # estimate prediction error
     error = mean_absolute_error(test[:, -1], predictions)
-    return error, test[:, 1], predictions
+    return error
+
+def walk_forward_validation(bat_usd, trade_start_dt, today_dt, lookback_window=14, xg_objective='reg:squaredlogerror', xg_n_estim=1000):
+    trading_df = bat_usd.set_index('date')
+    trading_df = trading_df['close']
+
+    trade_start_dt = datetime.datetime.strptime(trade_start_dt, '%Y-%m-%d')
+    trade_end_date = datetime.datetime.strptime(today_dt, '%Y-%m-%d')
+    delta = trade_end_date - trade_start_dt
+
+    price_predictions = []
+    for i in range(delta.days + 1):
+        train_start = trade_start_dt - datetime.timedelta(days=((lookback_window*2)-1)) - pd.DateOffset(days=1) + datetime.timedelta(days=i)
+        train_end = trade_start_dt - pd.DateOffset(days=1) + datetime.timedelta(days=i)
+        train_data = trading_df[train_start:train_end]
+
+        train = series_to_supervised(train_data, n_in=lookback_window)
+        trainX, trainy = train[:, :-1], train[:, -1]
+
+        model = XGBRegressor(objective=xg_objective, n_estimators=xg_n_estim)
+        model.fit(trainX, trainy)
+
+        row = train_data.values[-lookback_window:]
+        yhat = model.predict(np.asarray([row]))
+        price_predictions.append(yhat[0])
+    
+    trading_df = trading_df[trade_start_dt:trade_end_date]
+    trading_df = pd.DataFrame(trading_df)
+    trading_df['predictions'] = price_predictions
+
+    mae = mean_absolute_error(trading_df['close'].values, trading_df['predictions'].values)
+
+    return mae
+
 
 def xgboost_forecast(train, testX):
     # transform list into array
@@ -304,7 +337,7 @@ def xgboost_forecast(train, testX):
     yhat = model.predict(np.asarray([testX]))
     return yhat[0]
 
-def xgBoost_model(bat_usd, trade_start_dt, today_dt, training_window=60, xg_objective='reg:squaredlogerror', xg_n_estim=1000):
+def xgBoost_model(bat_usd, trade_start_dt, today_dt, lookback_window=30, xg_objective='reg:squaredlogerror', xg_n_estim=1000):
     trading_df = bat_usd.set_index('date')
     trading_df = trading_df['close']
 
@@ -315,17 +348,17 @@ def xgBoost_model(bat_usd, trade_start_dt, today_dt, training_window=60, xg_obje
 
     price_predictions = []
     for i in range(delta.days + 1):
-        train_start = trade_start_dt - datetime.timedelta(days=(training_window-1)) - pd.DateOffset(days=1) + datetime.timedelta(days=i)
+        train_start = trade_start_dt - datetime.timedelta(days=((lookback_window*2)-1)) - pd.DateOffset(days=1) + datetime.timedelta(days=i)
         train_end = trade_start_dt - pd.DateOffset(days=1) + datetime.timedelta(days=i)
         train_data = trading_df[train_start:train_end]
 
-        train = series_to_supervised(train_data, n_in=30)
+        train = series_to_supervised(train_data, n_in=lookback_window)
         trainX, trainy = train[:, :-1], train[:, -1]
 
         model = XGBRegressor(objective=xg_objective, n_estimators=xg_n_estim)
         model.fit(trainX, trainy)
 
-        row = train_data.values[-30:]
+        row = train_data.values[-lookback_window:]
         yhat = model.predict(np.asarray([row]))
         price_predictions.append(yhat[0])
     
@@ -445,23 +478,37 @@ if __name__ == "__main__":
     # ROI conversion/analysis (convert everything to USD for appropriate $ analysis)
     hold_only_portfolio_roi = calc_hold_only_roi(hold_only_portfolio, BAT_USD, BTC_USD, start_date, today)
 
+    ## validation procedures
+    # exanding window
+    # bat_vals = BAT_USD['close'].values
+    # data = series_to_supervised(bat_vals, 30) # num of historical days to use during training
+    # expanding_mae = expanding_window_validation(data, 14) # num of days to predict forward ... using 14 for a more reliable average
+    # print('expanding window - MAE: ' + str(expanding_mae))
+
+    # walk forward
+    # lb_window = [1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90] # number of historical days to use during training
+    # for lb in lb_window:
+    #     walk_forward_start_date = '2022-02-14' # again ... 14 days for a more reliable average (and to match expanding)
+    #     walking_mae = walk_forward_validation(BAT_USD, walk_forward_start_date, today, lb)
+    #     print('walk forward - MAE: ' + str(walking_mae) + ' ... lookback window: ' + str(lb))
+    # breakpoint()
+
     #### use for full processing results ####
-    # # create xg_boost predictions
-    # trading_df, mae = xgBoost_model(BAT_USD, trade_start_date, today)
-    # trading_df.to_csv('xgBoost_results.csv')
+    # create xg_boost predictions
+    trading_df, mae = xgBoost_model(BAT_USD, trade_start_date, today, 30) # 30 day lookback
+    trading_df.to_csv('xgBoost_results.csv')
     ########
 
     #### use if local 'test.csv' contains xgBoost_model trading_df ####
-    trading_df = pd.read_csv('xgBoost_results.csv')
-    trading_df['date'] = pd.to_datetime(trading_df['date'])
-    trading_df.set_index('date',inplace=True)
+    # trading_df = pd.read_csv('xgBoost_results.csv')
+    # trading_df['date'] = pd.to_datetime(trading_df['date'])
+    # trading_df.set_index('date',inplace=True)
     ########
 
     trading_df = trading_portfolio(trading_df, trade_start_date, start_date, today)
 
 
     final_roi = final_roi_df(hold_only_portfolio_roi, trading_df, BAT_USD)
-    
 
     ### automated pipeline / data update ###
     
@@ -479,12 +526,13 @@ if __name__ == "__main__":
 
     # correlation_plot(rolling_correlation_df, False, False, 'plots/rolling_correlation.png')
 
-    # roi_plot(hold_only_portfolio_roi, False, True, 'plots/roi_plot.png')
-    print(hold_only_portfolio_roi)
-    # final_roi_plot(final_roi, False, True, 'plots/final_roi.png')
+    roi_plot(hold_only_portfolio_roi, True, False, 'plots/roi_plot.png')
+
+    final_roi_plot(final_roi, True, False, 'plots/final_roi.png')
 
 
-
+    print(final_roi)
+    final_roi.to_csv('final_roi.csv')
 
     
     
