@@ -526,13 +526,10 @@ if __name__ == "__main__":
 
     # correlation_plot(rolling_correlation_df, False, False, 'plots/rolling_correlation.png')
 
-    roi_plot(hold_only_portfolio_roi, True, False, 'plots/roi_plot.png')
+    # roi_plot(hold_only_portfolio_roi, False, False, 'plots/roi_plot.png')
 
-    final_roi_plot(final_roi, True, False, 'plots/final_roi.png')
+    # final_roi_plot(final_roi, False, False, 'plots/final_roi.png')
 
-
-    print(final_roi)
-    final_roi.to_csv('final_roi.csv')
 
     
     
