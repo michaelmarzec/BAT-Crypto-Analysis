@@ -4,21 +4,24 @@
 ## fetch_daily_data --> api call for all data (good for automated pipeline)
 ## extract_data --> extraneous
 ## read_data --> read pre-saved parquet (good for ad-hoc usage)
-## created_merged_df --> 
-## create_plot --> 
-## correlation_plot --> 
-## table_plot --> 
-## rolling_correlation --> 
-## create_holdings_portfolio --> 
-## bat_acquisition --> 
-## calc_hold_only_roi --> 
-## roi_plot --> 
-## series_to_supervised --> ##### predict the price of BAT (relative to USD) # https://machinelearningmastery.com/xgboost-for-time-series-forecasting/
-## train_test_split -->
-## expanding_window_validation --> ##### expanding-window validation
-## xgboost_forecast --> #### fit an xgboost model and make a one step prediction
-## xgBoost_model --> 
-## trading_portfolio --> 
+## created_merged_df --> merge the separate price DFs into one
+## create_plot --> create a time-series plot for a single item (e.g., BTC)
+## correlation_plot --> create time-series plot of correlations across various items 
+## table_plot --> create table of correlation values
+## rolling_correlation --> calculate rolling correlations across various items over last 180 days
+## create_holdings_portfolio --> initate empty dataframe for trading window of various items. return df and index of df (i.e., trading window)
+## bat_acquisition --> adds 100 BAT monthly and performs conversion calculations to USD + BTC
+## calc_hold_only_roi --> create the DF that contains ROI results of each 'hold-only' strategy
+## roi_plot --> plot the hold-only strategies time-series ROI results
+## series_to_supervised --> convert time-series to supervised tabular learning... taken from (along with various following fuctions) ... # https://machinelearningmastery.com/xgboost-for-time-series-forecasting/
+## train_test_split --> split dataset into train and test (specifically being aware of data leakage ... i.e., split is based on first X vs last X based on window of time)
+## expanding_window_validation --> performs validation using a growing training dataset based on every available historical data point (i.e., expanding window)
+## walk_forward_validation --> performs validation using a training set that uses a consistent lookback period ... i.e., a shifting window ... i.e., walk-forward validation 
+## xgboost_forecast -->  fit training to an xgboost model and make a one step prediction
+## xgBoost_model --> train model and make all time-series predictions per parameters
+## trading_portfolio --> creates a DF to track theoretical trades over trading window using xgBoost_model's predictions
+## final_roi_df --> create the DF that contains ROI results for the trading strategy
+## final_roi_plot --> add the trading strategy ROI results to the hold-only roi plot
 
 # main
 ## parameters
@@ -323,7 +326,6 @@ def walk_forward_validation(bat_usd, trade_start_dt, today_dt, lookback_window=1
     mae = mean_absolute_error(trading_df['close'].values, trading_df['predictions'].values)
 
     return mae
-
 
 def xgboost_forecast(train, testX):
     # transform list into array
